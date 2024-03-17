@@ -58,6 +58,23 @@ class _ChatPageState extends State<ChatPage> {
             return Center(child: Text('Нет сообщений'));
           }
 
+          var lastMessage = snapshot.data!.docs.first;
+          String text = lastMessage['text'];
+          String sender = lastMessage['sender'];
+          String recipient = lastMessage['recipient'];
+          Timestamp timestamp = lastMessage['timestamp'];
+
+          String timeString = DateTime.fromMillisecondsSinceEpoch(
+                  timestamp.millisecondsSinceEpoch)
+              .toString();
+
+          bool isCurrentUserSender = sender == userId;
+
+          if (!isCurrentUserSender && recipient == userId) {
+            // Вызываем метод sendOneSignalNotification только если отправитель не текущий пользователь
+            sendOneSignalNotification(text);
+          }
+
           return ListView.builder(
             reverse: true,
             itemCount: snapshot.data!.docs.length,
@@ -66,16 +83,17 @@ class _ChatPageState extends State<ChatPage> {
               String text = messageData['text'];
               String sender = messageData['sender'];
               String recipient = messageData['recipient'];
-              Timestamp timestamp = messageData['timestamp']; // Добавлено
+              Timestamp timestamp = messageData['timestamp'];
 
               String timeString = DateTime.fromMillisecondsSinceEpoch(
                       timestamp.millisecondsSinceEpoch)
-                  .toString(); // Добавлено
+                  .toString();
 
               bool isCurrentUserSender = sender == userId;
+              bool isIncomingMessage = recipient == userId;
 
-              if (recipient == userId) {
-                // Отправить уведомление только если текущий пользователь получает сообщение
+              if (isIncomingMessage && !isCurrentUserSender) {
+                // Отправить уведомление только для входящего сообщения
                 sendOneSignalNotification(text);
               }
 
