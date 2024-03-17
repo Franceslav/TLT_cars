@@ -1,15 +1,15 @@
+import 'dart:convert';
 import 'package:cars/bloc/route_from_to/route_from_to.dart';
 import 'package:cars/pages/one_chat_page.dart';
-import 'package:cars/widgets/buttons/button1.dart';
+import 'package:cars/res/styles.dart';
 import 'package:cars/widgets/chat/chat_select_fake.dart';
-import 'package:cars/widgets/chat/one_chat_fake.dart';
 import 'package:cars/widgets/other/my_divider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
-import '../res/styles.dart';
 
 class ChatsPage extends StatefulWidget {
   ChatsPage({Key? key}) : super(key: key);
@@ -169,60 +169,46 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   Future<String> createChat(String phoneNumber) async {
-    String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    String? otherUserId = await getOtherUserId(phoneNumber);
+    String userId = FirebaseAuth.instance.currentUser?.phoneNumber ?? '';
+    String? otherUserPhoneNumber = phoneNumber;
 
-    if (otherUserId == null) {
+    if (otherUserPhoneNumber == null) {
       // Обработка ситуации, когда другой пользователь не найден
       return '';
     }
 
-    QuerySnapshot<Map<String, dynamic>>? existingChatsSnapshot =
+    // Проверяем, существует ли уже чат между пользователями
+    QuerySnapshot<Map<String, dynamic>> existingChatsSnapshot =
         await FirebaseFirestore.instance
             .collection('chats')
-            .where('participants', arrayContains: userId)
+            .where('participants', arrayContains: otherUserPhoneNumber)
             .get();
 
-    if (existingChatsSnapshot == null) {
-      // Обработка ситуации, когда снимок не получен
-      return '';
+    if (existingChatsSnapshot.docs.isNotEmpty) {
+      // Если чат уже существует, возвращаем его идентификатор
+      return existingChatsSnapshot.docs.first.id;
     }
 
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> existingChats =
-        existingChatsSnapshot.docs;
-
-    // Найдем чат, в котором участвует текущий пользователь и другой пользователь
-    QueryDocumentSnapshot<Map<String, dynamic>>? chatDoc;
-
-    try {
-      chatDoc = existingChats.firstWhere(
-        (doc) {
-          final data = doc.data();
-          final participants = data['participants'] as List<dynamic>?;
-
-          return participants?.contains(otherUserId) ?? false;
-        },
-      );
-    } catch (e) {
-      print('Error finding chat: $e');
-    }
-
-    if (chatDoc != null) {
-      return chatDoc.id;
-    }
-
-    // Если чат не найден, создадим новый
+    // Создание нового чата в коллекции "chats"
     DocumentReference chatRef =
         await FirebaseFirestore.instance.collection('chats').add({
-      'participants': [userId, otherUserId],
+      'participants': [
+        userId,
+        otherUserPhoneNumber
+      ], // Сохранение номеров телефонов обоих пользователей
+      'user1': userId, // Сохранение номера телефона первого пользователя
+      'user2':
+          otherUserPhoneNumber, // Сохранение номера телефона второго пользователя
     });
 
+    // Создание дополнительной информации о участниках чата в коллекции "participants"
     await chatRef.collection('participants').doc(userId).set({
-      'name': userId,
+      'phone': userId, // Здесь вы можете сохранить другие данные о пользователе
     });
 
-    await chatRef.collection('participants').doc(otherUserId).set({
-      'name': otherUserId,
+    await chatRef.collection('participants').doc(otherUserPhoneNumber).set({
+      'phone':
+          otherUserPhoneNumber, // Здесь вы можете сохранить другие данные о пользователе
     });
 
     return chatRef.id;

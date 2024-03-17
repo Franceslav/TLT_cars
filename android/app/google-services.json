@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "4969473277",
-    "project_id": "cars-429f6",
-    "storage_bucket": "cars-429f6.appspot.com"
+    "project_number": "997519386620",
+    "project_id": "cars2-2ed38",
+    "storage_bucket": "cars2-2ed38.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:4969473277:android:43fbca3fe63c0d6e304a94",
+        "mobilesdk_app_id": "1:997519386620:android:c287b410b1678fab543479",
         "android_client_info": {
           "package_name": "com.example.cars"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC_93datfZ3Ga_igjL2yfr0tVhIyR4thVk"
+          "current_key": "AIzaSyDbpfMAXSiYxuHvAPsAhyo4Rwc1R0e51oY"
         }
       ],
       "services": {

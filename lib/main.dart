@@ -2,6 +2,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cars/bloc/app_bottom_form/app_bottom_form.dart';
 import 'package:cars/bloc/auth/auth_cubit.dart';
 import 'package:cars/bloc/live_search/live_search_bloc.dart';
+import 'package:cars/firebase_options.dart';
 import 'package:cars/pages/driver_home_page.dart';
 import 'package:cars/pages/pass_home_page.dart';
 import 'package:cars/pages/register_page.dart';
@@ -15,7 +16,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/route_manager.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'bloc/route_from_to/route_from_to.dart';
-import 'firebase_options.dart';
+
 import 'package:flutter/material.dart';
 
 import 'pages/sign_in_page.dart';

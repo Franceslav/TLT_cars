@@ -1,19 +1,39 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ChatPage extends StatefulWidget {
-  final String chatId;
+  final String initialChatId;
 
-  const ChatPage({required this.chatId, Key? key}) : super(key: key);
+  const ChatPage({
+    required this.initialChatId,
+    Key? key,
+  }) : super(key: key);
 
   @override
   _ChatPageState createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
+  late String chatId;
+  late String userId; // Переменная userId больше не nullable и late
   final TextEditingController _messageController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    chatId = widget.initialChatId;
+    getUserId(); // Вызываем метод для получения userId
+  }
+
+  void getUserId() {
+    setState(() {
+      userId = FirebaseAuth.instance.currentUser?.uid ??
+          ''; // Устанавливаем значение userId
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +44,7 @@ class _ChatPageState extends State<ChatPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('chats')
-            .doc(widget.chatId)
+            .doc(chatId)
             .collection('messages')
             .orderBy('timestamp', descending: true)
             .snapshots(),
@@ -46,6 +66,11 @@ class _ChatPageState extends State<ChatPage> {
               var messageData = snapshot.data!.docs[index];
               String text = messageData['text'];
               String sender = messageData['sender'];
+              String recipient = messageData['recipient'];
+
+              bool isCurrentUserSender = sender == userId;
+
+              // Получаем метку времени сообщения и преобразуем в строку
               Timestamp timestamp = messageData['timestamp'];
               String timeString =
                   "${timestamp.toDate().hour}:${timestamp.toDate().minute}";
@@ -53,13 +78,13 @@ class _ChatPageState extends State<ChatPage> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Row(
-                  mainAxisAlignment: sender == 'Вы'
+                  mainAxisAlignment: isCurrentUserSender
                       ? MainAxisAlignment.end
                       : MainAxisAlignment.start,
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: sender == 'Вы'
+                        color: isCurrentUserSender
                             ? Colors.blue.withOpacity(0.2)
                             : Colors.grey.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(15),
@@ -70,7 +95,7 @@ class _ChatPageState extends State<ChatPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            timeString,
+                            timeString, // Используем timeString для вывода времени
                             style: TextStyle(
                               color: Color(0x7F333333),
                               fontSize: 12,
@@ -114,8 +139,7 @@ class _ChatPageState extends State<ChatPage> {
               IconButton(
                 onPressed: () {
                   _sendMessage(_messageController.text.trim());
-                  _messageController
-                      .clear(); // Clear the text field after sending
+                  _messageController.clear();
                 },
                 icon: Icon(Icons.send),
               ),
@@ -126,21 +150,68 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  void _sendMessage(String message) {
+  Future<String> getOtherUserId(String chatId) async {
+    DocumentSnapshot<Map<String, dynamic>> chatSnapshot =
+        await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+
+    if (chatSnapshot.exists) {
+      List<dynamic> participants = chatSnapshot.data()?['participants'] ?? [];
+      String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+      String otherUserId = participants.firstWhere((id) => id != currentUserId,
+          orElse: () => '');
+
+      return otherUserId;
+    } else {
+      throw Exception('Chat not found for chatId: $chatId');
+    }
+  }
+
+  void _sendMessage(String message) async {
     if (message.isNotEmpty) {
-      FirebaseFirestore.instance
+      String otherUserId = await getOtherUserId(chatId);
+      String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+      DocumentReference chatRef =
+          FirebaseFirestore.instance.collection('chats').doc(chatId);
+
+      if (!(await chatRef.get()).exists) {
+        String newChatId = await createNewChat(userId, otherUserId);
+        setState(() {
+          chatId = newChatId;
+        });
+      }
+
+      await FirebaseFirestore.instance
           .collection('chats')
-          .doc(widget.chatId)
+          .doc(chatId)
           .collection('messages')
           .add({
         'text': message,
-        'sender': 'Вы',
+        'sender': userId,
+        'recipient': otherUserId,
         'timestamp': Timestamp.now(),
       });
 
-      sendOneSignalNotification(
-          message); // Вызываем функцию отправки уведомления
+      sendOneSignalNotification(message);
     }
+  }
+
+  Future<String> createNewChat(String userId, String otherUserId) async {
+    DocumentReference chatRef =
+        await FirebaseFirestore.instance.collection('chats').add({
+      'participants': [userId, otherUserId],
+    });
+
+    await chatRef.collection('participants').doc(userId).set({
+      'name': userId,
+    });
+
+    await chatRef.collection('participants').doc(otherUserId).set({
+      'name': otherUserId,
+    });
+
+    return chatRef.id;
   }
 
   void sendOneSignalNotification(String message) async {
@@ -168,7 +239,7 @@ class _ChatPageState extends State<ChatPage> {
     );
 
     if (response.statusCode == 200) {
-      print('Уведомление успешно отправлено $message e');
+      print('Уведомление успешно отправлено $message');
     } else {
       print('Ошибка отправки уведомления: ${response.body}');
     }

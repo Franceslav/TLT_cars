@@ -1,12 +1,11 @@
 import 'package:cars/bloc/route_from_to/route_from_to.dart';
-import 'package:cars/widgets/buttons/button1.dart';
-import 'package:cars/widgets/chat/chat_select_fake.dart';
+// Импорт ChatPage
 import 'package:cars/widgets/chat/one_chat_fake.dart';
 import 'package:cars/widgets/other/my_divider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
-
 import '../res/styles.dart';
 
 class OneChatPage extends StatefulWidget {
@@ -14,21 +13,20 @@ class OneChatPage extends StatefulWidget {
 
   OneChatPage({
     required this.chatId,
-    super.key,
-  });
+    Key? key, // Исправлено
+  }) : super(key: key);
 
   @override
   State<OneChatPage> createState() => _OneChatPageState();
 }
 
 class _OneChatPageState extends State<OneChatPage> {
-  var comment = TextEditingController();
+  late String userId; // Добавлено для хранения userId
 
   @override
   void initState() {
-    comment = TextEditingController(
-        text: context.read<RouteFromToCubit>().get().comment ?? '');
     super.initState();
+    userId = getUserId(); // Получаем userId при инициализации
   }
 
   @override
@@ -59,10 +57,20 @@ class _OneChatPageState extends State<OneChatPage> {
             SizedBox(height: 15),
             MyDivider(),
             SizedBox(height: 10),
-            Expanded(child: ChatPage(chatId: widget.chatId)),
+            Expanded(
+              child: ChatPage(
+                initialChatId: widget.chatId,
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  String getUserId() {
+    // Здесь должен быть код для получения userId
+    // Например, если вы используете Firebase Authentication:
+    return FirebaseAuth.instance.currentUser?.uid ?? '';
   }
 }
