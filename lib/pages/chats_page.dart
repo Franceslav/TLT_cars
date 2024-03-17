@@ -9,30 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
-
 import '../res/styles.dart';
-
-Future<List<Map<String, dynamic>>> fetchDriverUsers() async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-  QuerySnapshot querySnapshot = await firestore
-      .collection('users')
-      .where('role', isEqualTo: 'Role.driver')
-      .get();
-  return querySnapshot.docs
-      .map((doc) => doc.data() as Map<String, dynamic>)
-      .toList();
-}
-
-Future<List<Map<String, dynamic>>> fetchPassUsers() async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-  QuerySnapshot querySnapshot = await firestore
-      .collection('users')
-      .where('role', isEqualTo: 'Role.pass')
-      .get();
-  return querySnapshot.docs
-      .map((doc) => doc.data() as Map<String, dynamic>)
-      .toList();
-}
 
 class ChatsPage extends StatefulWidget {
   ChatsPage({Key? key}) : super(key: key);
@@ -171,35 +148,95 @@ class _ChatsPageState extends State<ChatsPage> {
     );
   }
 
-  Future<String> createChat(String phoneNumber) async {
-    String userId = FirebaseAuth.instance.currentUser?.phoneNumber ?? '';
-
-    // Проверяем наличие существующего чата между текущим пользователем и пользователем с заданным номером телефона
-    QuerySnapshot existingChats = await FirebaseFirestore.instance
-        .collection('chats')
-        .where('participants', arrayContains: userId)
+  Future<List<Map<String, dynamic>>> fetchDriverUsers() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'Role.driver')
         .get();
+    return querySnapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+  }
 
-    if (existingChats.docs.isNotEmpty) {
-      // Если чат уже существует, возвращаем его идентификатор
-      return existingChats.docs.first.id;
+  Future<List<Map<String, dynamic>>> fetchPassUsers() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'Role.pass')
+        .get();
+    return querySnapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+  }
+
+  Future<String> createChat(String phoneNumber) async {
+    String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    String? otherUserId = await getOtherUserId(phoneNumber);
+
+    if (otherUserId == null) {
+      // Обработка ситуации, когда другой пользователь не найден
+      return '';
     }
 
-    // Если чат не существует, создаем новый
+    QuerySnapshot<Map<String, dynamic>>? existingChatsSnapshot =
+        await FirebaseFirestore.instance
+            .collection('chats')
+            .where('participants', arrayContains: userId)
+            .get();
+
+    if (existingChatsSnapshot == null) {
+      // Обработка ситуации, когда снимок не получен
+      return '';
+    }
+
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> existingChats =
+        existingChatsSnapshot.docs;
+
+    // Найдем чат, в котором участвует текущий пользователь и другой пользователь
+    QueryDocumentSnapshot<Map<String, dynamic>>? chatDoc;
+
+    try {
+      chatDoc = existingChats.firstWhere(
+        (doc) {
+          final data = doc.data();
+          final participants = data['participants'] as List<dynamic>?;
+
+          return participants?.contains(otherUserId) ?? false;
+        },
+      );
+    } catch (e) {
+      print('Error finding chat: $e');
+    }
+
+    if (chatDoc != null) {
+      return chatDoc.id;
+    }
+
+    // Если чат не найден, создадим новый
     DocumentReference chatRef =
         await FirebaseFirestore.instance.collection('chats').add({
-      'participants': [userId, phoneNumber], // Добавляем участников чата
+      'participants': [userId, otherUserId],
     });
 
-    // Добавляем информацию о пользователях в чат
     await chatRef.collection('participants').doc(userId).set({
-      'name': userId, // Имя текущего пользователя
+      'name': userId,
     });
-    // Здесь вы можете добавить только номер телефона как имя целевого пользователя, если имя, фамилия и отчество отсутствуют
-    await chatRef.collection('participants').doc(phoneNumber).set({
-      'name': phoneNumber, // Имя целевого пользователя
+
+    await chatRef.collection('participants').doc(otherUserId).set({
+      'name': otherUserId,
     });
 
     return chatRef.id;
+  }
+
+  Future<String> getOtherUserId(String phoneNumber) async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+    DocumentSnapshot<Map<String, dynamic>> userSnapshot =
+        await firestore.collection('users').doc(phoneNumber).get();
+
+    if (userSnapshot.exists) {
+      return userSnapshot.id;
+    } else {
+      throw Exception('User document not found for phone number: $phoneNumber');
+    }
   }
 }

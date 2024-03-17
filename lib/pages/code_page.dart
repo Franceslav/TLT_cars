@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cars/bloc/auth/auth_cubit.dart';
 import 'package:cars/models/user.dart';
 import 'package:cars/pages/driver_home_page.dart';
@@ -8,7 +6,7 @@ import 'package:cars/pages/register_page.dart';
 import 'package:cars/res/styles.dart';
 import 'package:cars/widgets/buttons/button1.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_phone_auth_handler/firebase_phone_auth_handler.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,17 +16,24 @@ import 'package:get/route_manager.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class CodePage extends StatefulWidget {
-  const CodePage({Key? key, required this.phone, required this.role})
-      : super(key: key);
+  const CodePage({
+    Key? key,
+    required this.phone,
+    required this.verificationId,
+    required this.role,
+  }) : super(key: key);
 
   final String phone;
+  final String verificationId;
   final Role role;
+
   @override
   State<CodePage> createState() => _CodePageState();
 }
 
 class _CodePageState extends State<CodePage> {
   var codeController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,11 +46,7 @@ class _CodePageState extends State<CodePage> {
             child: Column(
               children: [
                 const SizedBox(height: 100),
-                SvgPicture.asset(
-                  'asstes/logo.svg',
-                  width: 100,
-                ),
-                const SizedBox(height: 20),
+                // Остальной код страницы
                 const SizedBox(height: 20),
                 const SizedBox(height: 80),
                 Column(
@@ -64,64 +65,34 @@ class _CodePageState extends State<CodePage> {
                           fillColor: Colors.white,
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25.0),
-                            borderSide: BorderSide(
-                              color: blue,
-                            ),
+                            borderSide: BorderSide(color: blue),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25.0),
-                            borderSide: BorderSide(
-                              color: blue,
-                              width: 1.0,
-                            ),
+                            borderSide: BorderSide(color: blue, width: 1.0),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const Text(' Мы пришлем код на указанный номер'),
+                    const Text('Мы пришлем код на указанный номер'),
                     const SizedBox(height: 40),
                     InkWell(
                       onTap: () async {
-                        if (kDebugMode) {
-                          print('sms');
-                        }
-                        FirebaseAuth auth = FirebaseAuth.instance;
-                        await auth.verifyPhoneNumber(
-                          phoneNumber: widget.phone,
-                          verificationCompleted:
-                              (PhoneAuthCredential credential) async {
-                            if (kDebugMode) {
-                              print('verificationCompleted');
-                            }
-                            await auth.signInWithCredential(credential);
-                            if (kDebugMode) {
-                              print('Auth complete');
-                            }
-                            await checkUserInFirestore(context);
-                          },
-                          verificationFailed: (FirebaseAuthException e) {
-                            print(e);
-                          },
-                          codeSent:
-                              (String verificationId, int? resendToken) async {
-                            if (kDebugMode) {
-                              print('codeSent');
-                            }
-
-                            String smsCode = codeController.text;
-                            PhoneAuthCredential credential =
-                                PhoneAuthProvider.credential(
-                                    verificationId: verificationId,
-                                    smsCode: smsCode);
-                            await auth.signInWithCredential(credential);
-                            if (kDebugMode) {
-                              await checkUserInFirestore(context);
-                            }
-                          },
-                          codeAutoRetrievalTimeout: (String verificationId) {},
-                          timeout: const Duration(seconds: 120),
+                        String smsCode = codeController.text;
+                        PhoneAuthCredential credential =
+                            PhoneAuthProvider.credential(
+                          verificationId: widget.verificationId,
+                          smsCode: smsCode,
                         );
+
+                        try {
+                          await FirebaseAuth.instance
+                              .signInWithCredential(credential);
+                          checkUserInFirestore(context);
+                        } catch (e) {
+                          // Обработка ошибки при аутентификации
+                        }
                       },
                       child: Button1(title: 'Подтвердить код'),
                     ),
@@ -162,7 +133,6 @@ class _CodePageState extends State<CodePage> {
     } else {
       print(
           'Пользователь не найден в Firestore, перенаправляем на регистрацию');
-      // ignore: use_build_context_synchronously
       context.read<AuthCubit>().set(true);
       Future.delayed(Duration.zero,
           () => Get.to(RegisterPage(phone: phoneNumber, role: widget.role)));
