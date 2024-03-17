@@ -18,20 +18,19 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   late String chatId;
-  late String userId; // Переменная userId больше не nullable и late
+  late String userId;
   final TextEditingController _messageController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     chatId = widget.initialChatId;
-    getUserId(); // Вызываем метод для получения userId
+    getUserId();
   }
 
   void getUserId() {
     setState(() {
-      userId = FirebaseAuth.instance.currentUser?.uid ??
-          ''; // Устанавливаем значение userId
+      userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     });
   }
 
@@ -67,13 +66,18 @@ class _ChatPageState extends State<ChatPage> {
               String text = messageData['text'];
               String sender = messageData['sender'];
               String recipient = messageData['recipient'];
+              Timestamp timestamp = messageData['timestamp']; // Добавлено
+
+              String timeString = DateTime.fromMillisecondsSinceEpoch(
+                      timestamp.millisecondsSinceEpoch)
+                  .toString(); // Добавлено
 
               bool isCurrentUserSender = sender == userId;
 
-              // Получаем метку времени сообщения и преобразуем в строку
-              Timestamp timestamp = messageData['timestamp'];
-              String timeString =
-                  "${timestamp.toDate().hour}:${timestamp.toDate().minute}";
+              if (recipient == userId) {
+                // Отправить уведомление только если текущий пользователь получает сообщение
+                sendOneSignalNotification(text);
+              }
 
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -95,7 +99,7 @@ class _ChatPageState extends State<ChatPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            timeString, // Используем timeString для вывода времени
+                            timeString,
                             style: TextStyle(
                               color: Color(0x7F333333),
                               fontSize: 12,
@@ -192,8 +196,6 @@ class _ChatPageState extends State<ChatPage> {
         'recipient': otherUserId,
         'timestamp': Timestamp.now(),
       });
-
-      sendOneSignalNotification(message);
     }
   }
 
