@@ -1,5 +1,5 @@
-const searchApiKey = 'd70d85cf-ed89-4566-aa39-efdc726633ca';
+const searchApiKey = 'NzU1ZTU4NGMtNDBkZC00ZGE0LWI3MzktZmI3NjIxYTNiNjAz';
 
 const searchHost = 'https://search-maps.yandex.ru/v1/';
 
-const String oneSignalAppId = "609f9ae8-a1b8-406b-812e-fcb900730349";
+const String oneSignalAppId = "d63d1533-d464-4176-b5b3-7707c4d83bf8";

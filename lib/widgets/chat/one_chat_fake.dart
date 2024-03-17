@@ -144,8 +144,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void sendOneSignalNotification(String message) async {
-    final String oneSignalApiKey = 'YOUR_ONE_SIGNAL_API_KEY';
-    final String oneSignalAppId = 'YOUR_ONE_SIGNAL_APP_ID';
+    final String oneSignalApiKey =
+        'NzU1ZTU4NGMtNDBkZC00ZGE0LWI3MzktZmI3NjIxYTNiNjAz';
+    final String oneSignalAppId = 'd63d1533-d464-4176-b5b3-7707c4d83bf8';
     final String notificationTitle = 'Новое сообщение';
     final String notificationContent = 'Получено новое сообщение: $message';
 
@@ -167,7 +168,7 @@ class _ChatPageState extends State<ChatPage> {
     );
 
     if (response.statusCode == 200) {
-      print('Уведомление успешно отправлено');
+      print('Уведомление успешно отправлено $message e');
     } else {
       print('Ошибка отправки уведомления: ${response.body}');
     }
