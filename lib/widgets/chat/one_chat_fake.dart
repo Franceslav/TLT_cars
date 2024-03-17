@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:uuid/uuid.dart'; // Импорт пакета uuid
 
 class ChatPage extends StatefulWidget {
   final String initialChatId;
@@ -58,43 +59,26 @@ class _ChatPageState extends State<ChatPage> {
             return Center(child: Text('Нет сообщений'));
           }
 
-          var lastMessage = snapshot.data!.docs.first;
-          String text = lastMessage['text'];
-          String sender = lastMessage['sender'];
-          String recipient = lastMessage['recipient'];
-          Timestamp timestamp = lastMessage['timestamp'];
-
-          String timeString = DateTime.fromMillisecondsSinceEpoch(
-                  timestamp.millisecondsSinceEpoch)
-              .toString();
-
-          bool isCurrentUserSender = sender == userId;
-
-          if (!isCurrentUserSender && recipient == userId) {
-            // Вызываем метод sendOneSignalNotification только если отправитель не текущий пользователь
-            sendOneSignalNotification(text);
-          }
-
           return ListView.builder(
             reverse: true,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var messageData = snapshot.data!.docs[index];
-              String text = messageData['text'];
-              String sender = messageData['sender'];
-              String recipient = messageData['recipient'];
-              Timestamp timestamp = messageData['timestamp'];
+              String messageText = messageData['text'];
+              String messageSender = messageData['sender'];
+              String messageRecipient = messageData['recipient'];
+              Timestamp messageTimestamp = messageData['timestamp'];
 
-              String timeString = DateTime.fromMillisecondsSinceEpoch(
-                      timestamp.millisecondsSinceEpoch)
+              String messageTimeString = DateTime.fromMillisecondsSinceEpoch(
+                      messageTimestamp.millisecondsSinceEpoch)
                   .toString();
 
-              bool isCurrentUserSender = sender == userId;
-              bool isIncomingMessage = recipient == userId;
+              bool isCurrentUserSender = messageSender == userId;
+              bool isIncomingMessage = messageRecipient == userId;
 
-              if (isIncomingMessage && !isCurrentUserSender) {
-                // Отправить уведомление только для входящего сообщения
-                sendOneSignalNotification(text);
+              if (isIncomingMessage && !isCurrentUserSender && index == 0) {
+                // Отправить уведомление только для входящего и последнего сообщения
+                sendOneSignalNotification(messageText, userId);
               }
 
               return Padding(
@@ -117,7 +101,7 @@ class _ChatPageState extends State<ChatPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            timeString,
+                            messageTimeString,
                             style: TextStyle(
                               color: Color(0x7F333333),
                               fontSize: 12,
@@ -127,7 +111,7 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            text,
+                            messageText,
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 13,
@@ -214,6 +198,11 @@ class _ChatPageState extends State<ChatPage> {
         'recipient': otherUserId,
         'timestamp': Timestamp.now(),
       });
+
+      // Отправляем уведомление после добавления сообщения
+      if (userId != otherUserId) {
+        sendOneSignalNotification(message, otherUserId);
+      }
     }
   }
 
@@ -234,7 +223,7 @@ class _ChatPageState extends State<ChatPage> {
     return chatRef.id;
   }
 
-  void sendOneSignalNotification(String message) async {
+  void sendOneSignalNotification(String message, String recipientUserId) async {
     final String oneSignalApiKey =
         'NzU1ZTU4NGMtNDBkZC00ZGE0LWI3MzktZmI3NjIxYTNiNjAz';
     final String oneSignalAppId = 'd63d1533-d464-4176-b5b3-7707c4d83bf8';
