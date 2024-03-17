@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 
 class ChatPage extends StatefulWidget {
   final String chatId;
@@ -135,6 +137,39 @@ class _ChatPageState extends State<ChatPage> {
         'sender': 'Вы',
         'timestamp': Timestamp.now(),
       });
+
+      sendOneSignalNotification(
+          message); // Вызываем функцию отправки уведомления
+    }
+  }
+
+  void sendOneSignalNotification(String message) async {
+    final String oneSignalApiKey = 'YOUR_ONE_SIGNAL_API_KEY';
+    final String oneSignalAppId = 'YOUR_ONE_SIGNAL_APP_ID';
+    final String notificationTitle = 'Новое сообщение';
+    final String notificationContent = 'Получено новое сообщение: $message';
+
+    final String apiUrl = 'https://onesignal.com/api/v1/notifications';
+    final Map<String, dynamic> requestBody = {
+      'app_id': oneSignalAppId,
+      'included_segments': ['All'],
+      'headings': {'en': notificationTitle},
+      'contents': {'en': notificationContent},
+    };
+
+    final http.Response response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic $oneSignalApiKey',
+      },
+      body: json.encode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      print('Уведомление успешно отправлено');
+    } else {
+      print('Ошибка отправки уведомления: ${response.body}');
     }
   }
 }
