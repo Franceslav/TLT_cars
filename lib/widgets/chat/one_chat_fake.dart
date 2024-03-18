@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:uuid/uuid.dart'; // Импорт пакета uuid
+import 'package:uuid/uuid.dart'; 
 
 class ChatPage extends StatefulWidget {
   final String initialChatId;
@@ -74,7 +74,6 @@ class _ChatPageState extends State<ChatPage> {
               bool isIncomingMessage = messageRecipient == userId;
 
               if (isIncomingMessage && !isCurrentUserSender && index == 0) {
-                // Отправить уведомление только для входящего и последнего сообщения
                 sendOneSignalNotification(messageText, userId);
               }
 

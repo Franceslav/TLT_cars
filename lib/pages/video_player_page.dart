@@ -28,14 +28,14 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     super.initState();
 
     _firstController = VideoPlayerController.network(
-        'rtmp://rtmp.streamaxia.com/streamaxia/758462')
+        'rtmp://rtmp.streamaxia.com/streamaxia/1011875585')
       ..initialize().then((_) {
         setState(() {});
         _firstController.play();
       });
 
     _secondController = VideoPlayerController.network(
-        'rtmp://rtmp.streamaxia.com/streamaxia/758462')
+        'rtmp://rtmp.streamaxia.com/streamaxia/1011875585')
       ..initialize().then((_) {
         setState(() {});
       });

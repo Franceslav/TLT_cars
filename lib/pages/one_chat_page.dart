@@ -13,7 +13,7 @@ class OneChatPage extends StatefulWidget {
 
   OneChatPage({
     required this.chatId,
-    Key? key, // Исправлено
+    Key? key, 
   }) : super(key: key);
 
   @override
@@ -21,12 +21,12 @@ class OneChatPage extends StatefulWidget {
 }
 
 class _OneChatPageState extends State<OneChatPage> {
-  late String userId; // Добавлено для хранения userId
+  late String userId; 
 
   @override
   void initState() {
     super.initState();
-    userId = getUserId(); // Получаем userId при инициализации
+    userId = getUserId(); 
   }
 
   @override
@@ -69,8 +69,7 @@ class _OneChatPageState extends State<OneChatPage> {
   }
 
   String getUserId() {
-    // Здесь должен быть код для получения userId
-    // Например, если вы используете Firebase Authentication:
+
     return FirebaseAuth.instance.currentUser?.uid ?? '';
   }
 }

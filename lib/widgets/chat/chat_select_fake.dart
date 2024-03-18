@@ -24,11 +24,11 @@ class ChatSelectFake extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: Color(0x19333333),
                     shape:
-                        CircleBorder(), // используем CircleBorder для круглой рамки
+                        CircleBorder(), 
                   ),
                   child: SizedBox(
-                    width: 20, // фиксированная ширина
-                    height: 20, // фиксированная высота
+                    width: 20, 
+                    height: 20,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,

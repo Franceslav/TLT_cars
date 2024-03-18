@@ -29,10 +29,8 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   String getUserId() {
-    // Assuming you are using Firebase Authentication
     User? user = FirebaseAuth.instance.currentUser;
-    return user?.uid ??
-        ''; // Returns user ID if available, otherwise an empty string
+    return user?.uid ?? '';
   }
 
   Future<String> getUserRole() async {
@@ -46,10 +44,10 @@ class _ChatsPageState extends State<ChatsPage> {
           userSnapshot.data() as Map<String, dynamic>;
       print('User role from Firestore: ${userData['role']}');
       print('User data from Firestore: $userData');
-      return userData['role'] ?? ''; // Return user role if available
+      return userData['role'] ?? '';
     } else {
       print('User document does not exist');
-      return ''; // Return empty string if user document doesn't exist
+      return '';
     }
   }
 
@@ -173,11 +171,9 @@ class _ChatsPageState extends State<ChatsPage> {
     String? otherUserPhoneNumber = phoneNumber;
 
     if (otherUserPhoneNumber == null) {
-      // Обработка ситуации, когда другой пользователь не найден
       return '';
     }
 
-    // Проверяем, существует ли уже чат между пользователями
     QuerySnapshot<Map<String, dynamic>> existingChatsSnapshot =
         await FirebaseFirestore.instance
             .collection('chats')
@@ -185,30 +181,22 @@ class _ChatsPageState extends State<ChatsPage> {
             .get();
 
     if (existingChatsSnapshot.docs.isNotEmpty) {
-      // Если чат уже существует, возвращаем его идентификатор
       return existingChatsSnapshot.docs.first.id;
     }
 
-    // Создание нового чата в коллекции "chats"
     DocumentReference chatRef =
         await FirebaseFirestore.instance.collection('chats').add({
-      'participants': [
-        userId,
-        otherUserPhoneNumber
-      ], // Сохранение номеров телефонов обоих пользователей
-      'user1': userId, // Сохранение номера телефона первого пользователя
-      'user2':
-          otherUserPhoneNumber, // Сохранение номера телефона второго пользователя
+      'participants': [userId, otherUserPhoneNumber],
+      'user1': userId,
+      'user2': otherUserPhoneNumber,
     });
 
-    // Создание дополнительной информации о участниках чата в коллекции "participants"
     await chatRef.collection('participants').doc(userId).set({
-      'phone': userId, // Здесь вы можете сохранить другие данные о пользователе
+      'phone': userId,
     });
 
     await chatRef.collection('participants').doc(otherUserPhoneNumber).set({
-      'phone':
-          otherUserPhoneNumber, // Здесь вы можете сохранить другие данные о пользователе
+      'phone': otherUserPhoneNumber,
     });
 
     return chatRef.id;

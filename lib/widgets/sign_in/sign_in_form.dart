@@ -5,7 +5,7 @@ import 'package:cars/pages/pass_home_page.dart';
 import 'package:cars/pages/register_page.dart';
 import 'package:cars/res/styles.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/route_manager.dart';
@@ -77,28 +77,51 @@ class SignInForm extends StatelessWidget {
   Future<void> _sendCode(BuildContext context) async {
     String phoneNumber = phoneController.text.trim();
     if (phoneNumber.isNotEmpty) {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await FirebaseAuth.instance.signInWithCredential(credential);
-          await _checkUserInFirestore(context, phoneNumber);
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          print('Verification failed: ${e.message}');
-        },
-        codeSent: (String verificationId, int? resendToken) async {
-          // Navigate to CodePage and pass verificationId and role
-          Get.to(() => CodePage(
-                phone: phoneNumber,
-                verificationId: verificationId,
-                role: role,
-              ));
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          print('Verification code auto retrieval timeout');
-        },
-        timeout: Duration(seconds: 120),
-      );
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      DocumentSnapshot permissionSnapshot =
+          await firestore.collection('permission').doc(phoneNumber).get();
+
+      if (permissionSnapshot.exists) {
+        await FirebaseAuth.instance.verifyPhoneNumber(
+          phoneNumber: phoneNumber,
+          verificationCompleted: (PhoneAuthCredential credential) async {
+            await FirebaseAuth.instance.signInWithCredential(credential);
+            await _checkUserInFirestore(context, phoneNumber);
+          },
+          verificationFailed: (FirebaseAuthException e) {
+            print('Verification failed: ${e.message}');
+          },
+          codeSent: (String verificationId, int? resendToken) async {
+            Get.to(() => CodePage(
+                  phone: phoneNumber,
+                  verificationId: verificationId,
+                  role: role,
+                ));
+          },
+          codeAutoRetrievalTimeout: (String verificationId) {
+            print('Verification code auto retrieval timeout');
+          },
+          timeout: Duration(seconds: 120),
+        );
+      } else {
+        // Отобразите диалоговое окно с сообщением о том, что номер телефона отсутствует в базе данных
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Ошибка'),
+              content: Text(
+                  'Ваш номер телефона отсутствует в базе данных. $phoneNumber'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
@@ -208,9 +231,7 @@ class _CodePageState extends State<CodePage> {
                           await FirebaseAuth.instance
                               .signInWithCredential(credential);
                           checkUserInFirestore(context);
-                        } catch (e) {
-                          // Обработка ошибки при аутентификации
-                        }
+                        } catch (e) {}
                       },
                       child: Button1(title: 'Подтвердить код'),
                     ),
@@ -227,8 +248,8 @@ class _CodePageState extends State<CodePage> {
   Future<void> checkUserInFirestore(BuildContext context) async {
     FirebaseFirestore firestore = FirebaseFirestore.instance;
     String formattedPhoneNumber =
-        "+${widget.phone.replaceAll(RegExp(r'[^\d]'), '')}"; // Преобразование номера телефона в нужный формат
-    String usersCollectionPath = 'users'; // Замените на свой путь
+        "+${widget.phone.replaceAll(RegExp(r'[^\d]'), '')}";
+    String usersCollectionPath = 'users';
 
     DocumentSnapshot userSnapshot = await firestore
         .collection(usersCollectionPath)
